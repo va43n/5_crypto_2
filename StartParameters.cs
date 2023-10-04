@@ -5,10 +5,12 @@ namespace _5_crypto_2
 {
     class StartParameters
     {
-        private int N;
-        private double[] probabilities;
-        private string[] names;
-        private string[] indices;
+        private readonly int N;
+        private readonly double[] probabilities;
+        private readonly string[] names;
+        private readonly string[] code_words;
+        private readonly string[] indices;
+        private readonly int max_code_word_length;
 
         public StartParameters(string nameOfProbFile)
         {
@@ -25,17 +27,19 @@ namespace _5_crypto_2
                     string text;
                     text = sr.ReadLine();
 
+                    if (text == null || !text.Contains(" ")) { throw new Exception("Не удается прочитать содержимое файла. Скорее всего не соблюден правильный формат записи."); }
                     parameters = text.Split(" ");
                 }
             }
             else { throw new Exception("Файл \"" + nameOfProbFile + "\" не сущеcтвует."); }
 
             N = parameters.Length;
-            if (N % 2 != 0 || N == 0) { throw new Exception("Неправильная запись данных в файле с вероятностями: элементов должно быть четное число, нечетные элементы - буквы алфавита, четные элементы - соответствующие буквам вероятности. Скорее всего элементов в файле не хватает либо их нет вообще."); }
+            if (N % 2 != 0 || N == 0) { throw new Exception("Неправильная запись данных в файле с вероятностями: элементов должно быть четное число, нечетные элементы - буквы алфавита, четные элементы - соответствующие буквам вероятности. Скорее всего элементов в файле не хватает."); }
 
             N /= 2;
 
             names = new string[N];
+            code_words = new string[N];
             probabilities = new double[N + N];
             probabilities[N + N - 1] = 2;
 
@@ -59,7 +63,7 @@ namespace _5_crypto_2
                 counter++;
             }
 
-            if (temp != 1) { throw new Exception("Сумма всех вероятностей должна быть равна 1. Сейчас она равна " + temp + "."); }
+            if (!(temp + Math.Pow(10, -10) >= 1 && temp - Math.Pow(10, -10) <= 1)) { throw new Exception("Сумма всех вероятностей должна быть равна 1. Сейчас она равна " + temp + "."); }
 
             indices = new string[N + N - 1];
             used = new bool[N + N - 1];
@@ -80,25 +84,119 @@ namespace _5_crypto_2
                     else if (probabilities[j] < probabilities[min2] && j != min1 && !used[j]) { min2 = j; }
                 }
                 probabilities[i] = probabilities[min1] + probabilities[min2];
-                indices[i] = Convert.ToString(min2) + ":" + Convert.ToString(min1);
+                indices[i] = Convert.ToString(min1) + ":" + Convert.ToString(min2);
                 used[min1] = true;
                 used[min2] = true;
             }
+
+            FindCodeWords(N + N - 2, "");
+
+            max_code_word_length = 0;
+            for (int i = 0; i < N; i++)
+            {
+                if (code_words[i].Length > max_code_word_length) { max_code_word_length = code_words[i].Length; }
+            }
         }
 
-        public double[] GetProbabilities()
+        public double[] GetProbabilities() { return probabilities; }
+
+        public string[] GetCodeWords() { return code_words; }
+
+        public string[] GetNames() { return names; }
+
+        public string[] GetIndices() { return indices; }
+
+        private void FindCodeWords(int i, string current_code_word)
         {
-            return probabilities;
+            string[] halfs;
+            halfs = indices[i].Split(":");
+            if (Convert.ToInt32(halfs[0]) < N) { code_words[Convert.ToInt32(halfs[0])] = current_code_word + "0"; }
+            else { FindCodeWords(Convert.ToInt32(halfs[0]), current_code_word + "0"); }
+            if (Convert.ToInt32(halfs[1]) < N) { code_words[Convert.ToInt32(halfs[1])] = current_code_word + "1"; }
+            else { FindCodeWords(Convert.ToInt32(halfs[1]), current_code_word + "1"); }
         }
 
-        public string[] GetIndices()
+        public void CodeMessage(string inputFileName, string outputFileName)
         {
-            return indices;
+            string text, output = "";
+            bool isElementConsists;
+
+            if (File.Exists(inputFileName))
+            {
+                using (StreamReader sr = new(inputFileName))
+                {
+                    text = sr.ReadLine();
+                    if (text == null) { throw new Exception("Файл пуст, выберете другой."); }
+                }
+            }
+            else { throw new Exception("Файл \"" + inputFileName + "\" не сущеcтвует."); }
+
+            foreach (char letter in text)
+            {
+                isElementConsists = false;
+                for (int i = 0; i < N; i++)
+                {
+                    if (names[i] == Convert.ToString(letter))
+                    {
+                        isElementConsists = true;
+                        output += code_words[i];
+                        break;
+                    }
+                }
+                if (!isElementConsists) { throw new Exception("Элемент " + Convert.ToString(letter) + " не существует в алфавите."); }
+            }
+
+            if (File.Exists(outputFileName))
+            {
+                using (StreamWriter sr = new(outputFileName))
+                {
+                    sr.WriteLine(output);
+                }
+            }
         }
 
-        public string[] GetNames()
+        public void DecodeMessage(string inputFileName, string outputFileName)
         {
-            return names;
+            string text, code_word = "", output = "";
+            bool isCodeExists;
+
+            if (File.Exists(inputFileName))
+            {
+                using (StreamReader sr = new(inputFileName))
+                {
+                    text = sr.ReadLine();
+                    if (text == null) { throw new Exception("Файл пуст, выберете другой."); }
+                }
+            }
+            else { throw new Exception("Файл \"" + inputFileName + "\" не сущеcтвует."); }
+
+            foreach (char letter in text)
+            {
+                code_word += Convert.ToString(letter);
+                isCodeExists = false;
+                for (int i = 0; i < N; i++)
+                {
+                    if (code_word == code_words[i])
+                    {
+                        isCodeExists = true;
+                        output += names[i];
+                        code_word = "";
+                        break;
+                    }
+                }
+                if (code_word.Length == max_code_word_length)
+                {
+                    throw new Exception("Текст невозможно декодировать, проверьте правильность ввода и повторите попытку.");
+                }
+            }
+
+            if (File.Exists(outputFileName))
+            {
+                using (StreamWriter sr = new(outputFileName))
+                {
+                    sr.WriteLine(output);
+                }
+            }
         }
     }
 }
