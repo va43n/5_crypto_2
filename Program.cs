@@ -6,17 +6,18 @@ namespace _5_crypto_2
     {
         static void Main()
         {
+            string[] names, code_words;
             try
             {
                 StartParameters sp = new("J:\\С#\\source\\repos\\5_crypto_2\\probabilities.txt");
-                foreach(double p in sp.GetProbabilities()) { Console.WriteLine(p); }
-                Console.WriteLine();
-                foreach (string n in sp.GetNames()) { Console.WriteLine(n); }
-                Console.WriteLine();
-                foreach (string c in sp.GetCodeWords()) { Console.WriteLine(c); }
-                Console.WriteLine();
-                foreach (string i in sp.GetIndices()) { Console.WriteLine(i); }
-                Console.WriteLine();
+                names = sp.names;
+                code_words = sp.code_words;
+
+                for (int i = 0; i < sp.N; i++) { Console.WriteLine(names[i] + " " + code_words[i]); }
+                Console.WriteLine(sp.max_code_word_length + " " + sp.average_length + " " + sp.redundancy + " " + sp.KraftInequality);
+                if (sp.KraftInequality < 1) { Console.WriteLine("Ok"); }
+                else if (sp.KraftInequality == 1) { Console.WriteLine("OPTIMAL"); }
+                else { Console.WriteLine("No"); }
 
                 //sp.CodeMessage("J:\\С#\\source\\repos\\5_crypto_2\\input.txt", "J:\\С#\\source\\repos\\5_crypto_2\\output.txt");
                 sp.DecodeMessage("J:\\С#\\source\\repos\\5_crypto_2\\output.txt", "J:\\С#\\source\\repos\\5_crypto_2\\input.txt");

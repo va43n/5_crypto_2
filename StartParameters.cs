@@ -5,12 +5,15 @@ namespace _5_crypto_2
 {
     class StartParameters
     {
-        private readonly int N;
-        private readonly double[] probabilities;
-        private readonly string[] names;
-        private readonly string[] code_words;
+        public readonly int N;
+        public readonly double[] probabilities;
+        public readonly string[] names;
+        public readonly string[] code_words;
         private readonly string[] indices;
-        private readonly int max_code_word_length;
+        public readonly int max_code_word_length;
+        public readonly double average_length;
+        public readonly double redundancy;
+        public readonly double KraftInequality;
 
         public StartParameters(string nameOfProbFile)
         {
@@ -92,19 +95,22 @@ namespace _5_crypto_2
             FindCodeWords(N + N - 2, "");
 
             max_code_word_length = 0;
+            KraftInequality = 0;
+            temp = 0;
             for (int i = 0; i < N; i++)
             {
+                temp += code_words[i].Length;
+                KraftInequality += Math.Pow(2, -code_words[i].Length);
                 if (code_words[i].Length > max_code_word_length) { max_code_word_length = code_words[i].Length; }
             }
+            average_length = temp / N;
+
+            redundancy = 0;
+            for (int i = 0; i < N; i++) { redundancy += probabilities[i] * Math.Log2(probabilities[i]); }
+            redundancy /= Math.Log2(N);
+            redundancy += 1;
+
         }
-
-        public double[] GetProbabilities() { return probabilities; }
-
-        public string[] GetCodeWords() { return code_words; }
-
-        public string[] GetNames() { return names; }
-
-        public string[] GetIndices() { return indices; }
 
         private void FindCodeWords(int i, string current_code_word)
         {
@@ -158,7 +164,6 @@ namespace _5_crypto_2
         public void DecodeMessage(string inputFileName, string outputFileName)
         {
             string text, code_word = "", output = "";
-            bool isCodeExists;
 
             if (File.Exists(inputFileName))
             {
@@ -173,12 +178,10 @@ namespace _5_crypto_2
             foreach (char letter in text)
             {
                 code_word += Convert.ToString(letter);
-                isCodeExists = false;
                 for (int i = 0; i < N; i++)
                 {
                     if (code_word == code_words[i])
                     {
-                        isCodeExists = true;
                         output += names[i];
                         code_word = "";
                         break;
